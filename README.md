@@ -15,7 +15,7 @@ API desenvolvida em Python com FastAPI para automação de consultas ao [Portal 
 rpa_api/
 ├── rpa_api/
 │   ├── app.py        # Aplicação FastAPI e endpoints
-│   ├── models.py     # Schemas Pydantic (request/response)
+│   ├── schemas.py    # Schemas Pydantic (request/response)
 │   └── scraper.py    # Robô Playwright (coleta de dados)
 ├── tests/
 ├── README.md
@@ -47,7 +47,7 @@ Acesse:
 
 ## Endpoints
 
-### `POST /consulta`
+### `POST /api/v1/consulta`
 
 Inicia a automação e retorna os dados coletados do Portal da Transparência.
 
@@ -62,17 +62,35 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
 }
 ```
 
-> Pelo menos um dos campos `nome`, `cpf` ou `nis` é obrigatório.
+> Pelo menos um dos campos `nome`, `cpf` ou `nis` é obrigatório. `filtro_beneficiario: true` restringe a busca a beneficiários de programas sociais.
 
-**Resposta:**
+**Resposta (sucesso):**
 
 ```json
 {
-  "nome": "...",
-  "cpf": "...",
-  "beneficios": [...],
-  "screenshot_base64": "...",
-  "status": "sucesso"
+  "status": "sucesso",
+  "nome": "NOME DA PESSOA",
+  "cpf": "***.***.***-**",
+  "beneficios": [
+    {
+      "tipo": "Nome do Programa",
+      "dados": [
+        { "NIS": "00000000000", "Nome": "...", "Valor Recebido": "R$ 0,00" }
+      ]
+    }
+  ],
+  "screenshot_base64": "<base64>",
+  "mensagem": null
+}
+```
+
+**Resposta (erro):**
+
+```json
+{
+  "status": "erro",
+  "beneficios": [],
+  "mensagem": "Foram encontrados 0 resultados para o termo ..."
 }
 ```
 
@@ -86,17 +104,10 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
 | Erro por Nome | Nome inexistente | JSON com mensagem de erro |
 | Filtrado | Sobrenome + filtro social | JSON com dados do primeiro resultado filtrado |
 
-## Variáveis de Ambiente
-
-Crie um arquivo `.env` na raiz do projeto:
-
-```env
-# Configurações futuras (ex: timeout, headless mode)
-PLAYWRIGHT_HEADLESS=true
-```
-
 ## Decisões Técnicas
 
 - **Playwright** foi escolhido por oferecer suporte nativo a execuções assíncronas e paralelas, modo headless robusto e API moderna em Python.
 - **FastAPI** gera automaticamente a documentação Swagger/OpenAPI, atendendo ao requisito diferencial do desafio.
-- A estrutura modular (`scraper`, `models`, `app`) facilita testes isolados e manutenção.
+- A estrutura modular (`scraper`, `schemas`, `app`) facilita testes isolados e manutenção.
+- O scraper simula um navegador real (user-agent, locale, timezone, viewport) para contornar bloqueios de CDN (CloudFront 403).
+- Os dados de benefícios são extraídos diretamente das tabelas do accordion na página de perfil, evitando navegação para páginas de detalhe que exigem reCAPTCHA.

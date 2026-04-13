@@ -83,10 +83,11 @@ async def consultar(
             # Verifica se não encontrou resultados
             not_found = await page.query_selector(".br-item.not-found")
             if not_found:
-                return {
-                    "status": "erro",
-                    "mensagem": f"Foram encontrados 0 resultados para o termo {termo}",
-                }
+                if cpf or nis:
+                    mensagem = "Não foi possível retornar os dados no tempo de resposta solicitado"
+                else:
+                    mensagem = f"Foram encontrados 0 resultados para o termo {termo}"
+                return {"status": "erro", "mensagem": mensagem}
 
             # Pega o primeiro resultado
             primeiro = await page.query_selector(".link-busca-nome")
