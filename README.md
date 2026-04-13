@@ -8,6 +8,8 @@ API desenvolvida em Python com FastAPI para automação de consultas ao [Portal 
 - **FastAPI** — framework web e documentação automática (Swagger/OpenAPI)
 - **Playwright** — automação headless do navegador
 - **Poetry** — gerenciamento de dependências
+- **Docker** — containerização da aplicação
+- **slowapi** — rate limiting por IP
 
 ## Estrutura do Projeto
 
@@ -22,7 +24,21 @@ rpa_api/
 └── pyproject.toml
 ```
 
-## Instalação
+## Instalação e execução
+
+### Com Docker (recomendado)
+
+**Pré-requisito:** Docker instalado.
+
+```bash
+# Build da imagem
+docker build -t rpa-transparencia .
+
+# Rodar o container
+docker run -p 8000:8000 rpa-transparencia
+```
+
+### Sem Docker
 
 **Pré-requisitos:** Python 3.13+ e Poetry instalados.
 
@@ -32,11 +48,8 @@ poetry install
 
 # Instalar o navegador do Playwright
 poetry run playwright install chromium
-```
 
-## Rodando a aplicação
-
-```bash
+# Rodar em modo desenvolvimento
 poetry run fastapi dev rpa_api/app.py
 ```
 
@@ -104,6 +117,12 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
 | Erro por Nome | Nome inexistente | JSON com mensagem de erro |
 | Filtrado | Sobrenome + filtro social | JSON com dados do primeiro resultado filtrado |
 
+## Segurança e Limites
+
+- **Rate limiting:** máximo de 5 requisições por minuto por IP. Excedido, retorna HTTP `429`.
+- **Semáforo de concorrência:** máximo de 2 browsers Playwright simultâneos. Requisições excedentes aguardam na fila.
+- **CORS:** habilitado para todas as origens, permitindo consumo por ferramentas externas como n8n.
+
 ## Decisões Técnicas
 
 - **Playwright** foi escolhido por oferecer suporte nativo a execuções assíncronas e paralelas, modo headless robusto e API moderna em Python.
@@ -111,3 +130,4 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
 - A estrutura modular (`scraper`, `schemas`, `app`) facilita testes isolados e manutenção.
 - O scraper simula um navegador real (user-agent, locale, timezone, viewport) para contornar bloqueios de CDN (CloudFront 403).
 - Os dados de benefícios são extraídos diretamente das tabelas do accordion na página de perfil, evitando navegação para páginas de detalhe que exigem reCAPTCHA.
+- A imagem Docker usa `python:3.13-slim` com instalação do Chromium via `playwright install --with-deps`, resultando na menor imagem viável (~1.1GB com Chromium).
