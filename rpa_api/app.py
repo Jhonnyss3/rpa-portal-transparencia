@@ -37,7 +37,7 @@ async def consultar(request: Request, body: ConsultaRequest):
     if N8N_WEBHOOK_URL:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.post(N8N_WEBHOOK_URL, json=resultado)
+                await client.post(N8N_WEBHOOK_URL, json=resultado.model_dump())
         except Exception:
             pass
 
