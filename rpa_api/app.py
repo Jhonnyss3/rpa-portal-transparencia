@@ -1,9 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from rpa_api.schemas import ConsultaRequest, ConsultaResponse
 from rpa_api import scraper
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="RPA Portal da Transparência")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,11 +21,12 @@ app.add_middleware(
 
 
 @app.post("/api/v1/consulta", response_model=ConsultaResponse)
-async def consultar(request: ConsultaRequest):
+@limiter.limit("5/minute")
+async def consultar(request: Request, body: ConsultaRequest):
     resultado = await scraper.consultar(
-        nome=request.nome,
-        cpf=request.cpf,
-        nis=request.nis,
-        filtro_beneficiario=request.filtro_beneficiario,
+        nome=body.nome,
+        cpf=body.cpf,
+        nis=body.nis,
+        filtro_beneficiario=body.filtro_beneficiario,
     )
     return resultado

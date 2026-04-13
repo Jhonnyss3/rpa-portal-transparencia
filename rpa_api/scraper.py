@@ -1,8 +1,11 @@
+import asyncio
 import base64
 from playwright.async_api import async_playwright, Page, TimeoutError as PlaywrightTimeout
 
 BASE_URL = "https://www.portaldatransparencia.gov.br"
 BUSCA_URL = f"{BASE_URL}/pessoa-fisica/busca/lista"
+
+_semaforo = asyncio.Semaphore(2)
 
 
 async def _screenshot_base64(page: Page) -> str:
@@ -52,7 +55,7 @@ async def consultar(
 ) -> dict:
     termo = cpf or nis or nome
 
-    async with async_playwright() as p:
+    async with _semaforo, async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
