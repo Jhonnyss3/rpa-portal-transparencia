@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import re
 from playwright.async_api import async_playwright, Page, TimeoutError as PlaywrightTimeout
 
 BASE_URL = "https://www.portaldatransparencia.gov.br"
@@ -123,9 +124,10 @@ async def consultar(
             # Captura CPF exibido na página
             cpf_encontrado = None
             try:
-                el = await page.query_selector("[data-cpf], .cpf, #cpf")
-                if el:
-                    cpf_encontrado = (await el.inner_text()).strip()
+                texto = await page.inner_text("body")
+                match = re.search(r'\*{3}\.\d{3}\.\d{3}-\*{2}', texto)
+                if match:
+                    cpf_encontrado = match.group()
             except Exception:
                 pass
 

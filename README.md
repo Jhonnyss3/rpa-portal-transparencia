@@ -1,6 +1,6 @@
 # RPA Portal da Transparência — API
 
-API desenvolvida em Python com FastAPI para automação de consultas ao [Portal da Transparência do Governo Federal](https://portaldatransparencia.gov.br/), coletando dados de pessoas físicas e seus vínculos com programas sociais.
+Solução de automação desenvolvida em Python para consultar dados públicos de pessoas físicas no [Portal da Transparência do Governo Federal](https://portaldatransparencia.gov.br/). A API realiza scraping headless com Playwright, extrai dados de vínculos com programas sociais e notifica um webhook no n8n ao final de cada consulta — permitindo integração direta com fluxos de automação e planilhas.
 
 ## Tecnologias
 
@@ -10,6 +10,7 @@ API desenvolvida em Python com FastAPI para automação de consultas ao [Portal 
 - **Poetry** — gerenciamento de dependências
 - **Docker** — containerização da aplicação
 - **slowapi** — rate limiting por IP
+- **httpx** — cliente HTTP assíncrono para notificação ao n8n
 
 ## Estrutura do Projeto
 
@@ -22,6 +23,19 @@ rpa_api/
 ├── tests/
 ├── README.md
 └── pyproject.toml
+```
+
+## Variáveis de Ambiente
+
+| Variável | Descrição | Obrigatória |
+|---|---|---|
+| `N8N_WEBHOOK_URL` | URL do webhook n8n para receber o resultado de cada consulta | Não |
+| `PLAYWRIGHT_TIMEOUT` | Timeout das operações do Playwright em ms | Não |
+
+Crie um arquivo `.env` na raiz do projeto para desenvolvimento local:
+
+```env
+N8N_WEBHOOK_URL=https://seu-dominio.app.n8n.cloud/webhook/consulta-transparencia
 ```
 
 ## Instalação e execução
@@ -62,7 +76,7 @@ Acesse:
 
 ### `POST /api/v1/consulta`
 
-Inicia a automação e retorna os dados coletados do Portal da Transparência.
+Inicia a automação e retorna os dados coletados do Portal da Transparência. Ao finalizar, notifica o webhook configurado em `N8N_WEBHOOK_URL` com o mesmo payload da resposta.
 
 **Body (JSON):**
 
@@ -83,7 +97,7 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
 {
   "status": "sucesso",
   "nome": "NOME DA PESSOA",
-  "cpf": "***.***.***-**",
+  "cpf": "***.659.347-**",
   "beneficios": [
     {
       "tipo": "Nome do Programa",
@@ -96,6 +110,8 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
   "mensagem": null
 }
 ```
+
+> O campo `cpf` retorna o valor mascarado exatamente como exibido pelo portal (`***.659.347-**`).
 
 **Resposta (erro):**
 
@@ -131,3 +147,5 @@ Inicia a automação e retorna os dados coletados do Portal da Transparência.
 - O scraper simula um navegador real (user-agent, locale, timezone, viewport) para contornar bloqueios de CDN (CloudFront 403).
 - Os dados de benefícios são extraídos diretamente das tabelas do accordion na página de perfil, evitando navegação para páginas de detalhe que exigem reCAPTCHA.
 - A imagem Docker usa `python:3.13-slim` com instalação do Chromium via `playwright install --with-deps`, resultando na menor imagem viável (~1.1GB com Chromium).
+- O CPF é capturado via regex no texto da página (`***.659.347-**`), tornando a extração resiliente a mudanças na estrutura HTML do portal.
+- A notificação ao n8n é feita de forma assíncrona após a resposta ser computada, com timeout de 30 segundos para acomodar o payload com screenshot.
