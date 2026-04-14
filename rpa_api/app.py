@@ -1,5 +1,8 @@
 import os
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -37,7 +40,7 @@ async def consultar(request: Request, body: ConsultaRequest):
     if N8N_WEBHOOK_URL:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.post(N8N_WEBHOOK_URL, json=resultado.model_dump())
+                await client.post(N8N_WEBHOOK_URL, json=resultado)
         except Exception:
             pass
 
